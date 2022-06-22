@@ -1,0 +1,7 @@
+[requires]
+libunwind/1.6.2
+doctest/2.4.9
+
+[generators]
+CMakeDeps
+CMakeToolchain
