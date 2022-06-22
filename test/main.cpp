@@ -39,7 +39,7 @@ int get_stack_depth() {
     unw_cursor_t cursor;
     unw_init_local(&cursor, &context);
 
-    int ret;
+    int ret = 0;
     while (unw_step(&cursor) > 0) {
         ret++;
     }
@@ -61,6 +61,7 @@ TEST_CASE("stack depth is constant") {
     std::optional<std::function<nr::nonrec<int>(int)>> f;
     SUBCASE("deep recursion") {
         f = [&](int depth) -> nr::nonrec<int> {
+            check_stack_depth();
             if (depth > 0) {
                 co_await (*f)(depth - 1);
             }
@@ -69,6 +70,7 @@ TEST_CASE("stack depth is constant") {
     }
     SUBCASE("wide recursion") {
         f = [&](int depth) -> nr::nonrec<int> {
+            check_stack_depth();
             if (depth > 0) {
                 co_await (*f)(depth - 1);
                 co_await (*f)(depth - 1);
@@ -77,5 +79,5 @@ TEST_CASE("stack depth is constant") {
         };
     }
 
-    (*f)(10);
+    (*f)(10).get();
 }
