@@ -16,20 +16,34 @@ struct nonrec;
 
 namespace detail {
 
+struct suspend_if {
+    bool condition;
+
+    bool await_ready() {
+        return !condition;
+    }
+
+    void await_suspend(std::coroutine_handle<>) {}
+    void await_resume() {}
+};
+
 template <typename T>
 struct promise {
     std::optional<T> value;
-    std::stack<std::function<void()>>* stack;
+    std::stack<std::coroutine_handle<>>* stack = nullptr;
 
     promise() = default;
 
     auto initial_suspend() {
-        return std::suspend_always{};
+        return suspend_if{stack == nullptr};
     }
 
     auto final_suspend() noexcept {
         return std::suspend_always{};
     }
+
+    template <typename S>
+    nonrec<S> await_transform(nonrec<S> expr);
 
     nonrec<T> get_return_object();
     void return_value(const T& v);
@@ -57,16 +71,26 @@ struct nonrec : std::coroutine_handle<detail::promise<T>> {
     using promise_type = detail::promise<T>;
 
     nonrec(base_type&& handle);
+    nonrec(nonrec&& other);
 
     nonrec(const nonrec&) = delete;
-    nonrec(nonrec&&) = delete;
     nonrec& operator=(const nonrec&) = delete;
     nonrec& operator=(nonrec&&) = delete;
     ~nonrec();
 
     detail::awaitable<T> operator co_await();
     T get() &&;
+
+private:
+    bool alive_;
 };
+
+template <typename T>
+template <typename S>
+nonrec<S> detail::promise<T>::await_transform(nonrec<S> expr) {
+    expr.promise().stack = stack;
+    return expr;
+}
 
 template <typename T>
 nonrec<T> detail::promise<T>::get_return_object() {
@@ -96,9 +120,7 @@ bool detail::awaitable<T>::await_ready() {
 template <typename T>
 template <typename S>
 std::coroutine_handle<detail::promise<T>> detail::awaitable<T>::await_suspend(std::coroutine_handle<promise<S>>& waitee) {
-    auto *stack = waitee.promise().stack;
-    handle.promise().stack = stack;
-    stack->push([waitee = &waitee]{ waitee->resume(); });
+    handle.promise().stack->push(waitee);
     return handle;
 }
 
@@ -108,13 +130,22 @@ T detail::awaitable<T>::await_resume() {
 }
 
 template <typename T>
-nonrec<T>::nonrec(base_type &&handle)
+nonrec<T>::nonrec(base_type&& handle)
     : base_type{std::move(handle)}
+    , alive_(true)
+{}
+
+template <typename T>
+nonrec<T>::nonrec(nonrec&& other)
+    : base_type{std::move(other)}
+    , alive_(std::exchange(other.alive_, false))
 {}
 
 template <typename T>
 nonrec<T>::~nonrec() {
-    this->destroy();
+    if (alive_) {
+        this->destroy();
+    }
 }
 
 template <typename T>
@@ -124,13 +155,13 @@ detail::awaitable<T> nonrec<T>::operator co_await() {
 
 template <typename T>
 T nonrec<T>::get() && {
-    std::stack<std::function<void()>> stack;
+    std::stack<std::coroutine_handle<>> stack;
     this->promise().stack = &stack;
     this->resume();
     while (!stack.empty()) {
-        auto f = stack.top();
+        auto next_handle = stack.top();
         stack.pop();
-        f();
+        next_handle.resume();
     }
     return *this->promise().value;
 }
