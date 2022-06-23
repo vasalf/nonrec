@@ -134,7 +134,10 @@ nonrec<void> detail::promise<void>::get_return_object() {
 
 template <typename T>
 bool detail::awaitable<T>::await_ready() {
-    return false;
+    if constexpr (!std::is_void_v<T>) {
+        return handle.promise().value.has_value();
+    }
+    return handle.done();
 }
 
 template <typename T>
