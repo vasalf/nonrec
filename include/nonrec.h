@@ -5,9 +5,9 @@
 #endif
 
 #include <coroutine>
-#include <functional>
 #include <optional>
 #include <stack>
+#include <type_traits>
 
 namespace nr {
 
@@ -27,28 +27,46 @@ struct suspend_if {
     void await_resume() {}
 };
 
-template <typename T>
-struct promise {
-    std::optional<T> value;
+struct promise_base {
     std::stack<std::coroutine_handle<>>* stack = nullptr;
 
-    promise() = default;
+    promise_base() = default;
 
     auto initial_suspend() {
         return suspend_if{stack == nullptr};
     }
 
+    template <typename S>
+    nonrec<S> await_transform(nonrec<S> expr);
+
+    void unhandled_exception();
+};
+
+template <typename T>
+struct promise : promise_base {
+    std::optional<T> value;
+
+    promise() = default;
+
     auto final_suspend() noexcept {
         return std::suspend_always{};
     }
 
-    template <typename S>
-    nonrec<S> await_transform(nonrec<S> expr);
-
     nonrec<T> get_return_object();
     void return_value(const T& v);
     void return_value(T&& v);
-    void unhandled_exception();
+};
+
+template <>
+struct promise<void> : promise_base {
+    promise() = default;
+
+    auto final_suspend() noexcept {
+        return std::suspend_never{};
+    }
+
+    nonrec<void> get_return_object();
+    void return_void() {}
 };
 
 template <typename T>
@@ -85,11 +103,14 @@ private:
     bool alive_;
 };
 
-template <typename T>
 template <typename S>
-nonrec<S> detail::promise<T>::await_transform(nonrec<S> expr) {
+nonrec<S> detail::promise_base::await_transform(nonrec<S> expr) {
     expr.promise().stack = stack;
     return expr;
+}
+
+void detail::promise_base::unhandled_exception() {
+    std::terminate();
 }
 
 template <typename T>
@@ -107,9 +128,8 @@ void detail::promise<T>::return_value(T&& v) {
     value.emplace(std::move(v));
 }
 
-template <typename T>
-void detail::promise<T>::unhandled_exception() {
-    std::terminate();
+nonrec<void> detail::promise<void>::get_return_object() {
+    return nonrec<void>::from_promise(*this);
 }
 
 template <typename T>
@@ -126,7 +146,9 @@ std::coroutine_handle<detail::promise<T>> detail::awaitable<T>::await_suspend(st
 
 template <typename T>
 T detail::awaitable<T>::await_resume() {
-    return *handle.promise().value;
+    if constexpr (!std::is_void_v<T>) {
+        return *handle.promise().value;
+    }
 }
 
 template <typename T>
@@ -143,8 +165,10 @@ nonrec<T>::nonrec(nonrec&& other)
 
 template <typename T>
 nonrec<T>::~nonrec() {
-    if (alive_) {
-        this->destroy();
+    if constexpr (!std::is_void_v<T>) {
+        if (alive_) {
+            this->destroy();
+        }
     }
 }
 
@@ -163,7 +187,9 @@ T nonrec<T>::get() && {
         stack.pop();
         next_handle.resume();
     }
-    return *this->promise().value;
+    if constexpr (!std::is_void_v<T>) {
+        return *this->promise().value;
+    }
 }
 
 } // namespace nr

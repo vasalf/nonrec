@@ -32,6 +32,21 @@ TEST_CASE("smoke: fibonacci") {
     }
 }
 
+TEST_CASE("smoke: void return type") {
+    bool reached_end = false;
+
+    std::function<nr::nonrec<void>(int)> f = [&](int depth) -> nr::nonrec<void> {
+        if (depth == 0) {
+            reached_end = true;
+            co_return;
+        }
+        co_await f(depth - 1);
+    };
+
+    f(10).get();
+    CHECK(reached_end);
+}
+
 int get_stack_depth() {
     unw_context_t context;
     unw_getcontext(&context);
@@ -48,6 +63,7 @@ int get_stack_depth() {
 }
 
 TEST_CASE("stack depth is constant") {
+    bool reached_end = false;
     std::optional<int> stack_depth;
 
     auto check_stack_depth = [&]() {
@@ -58,26 +74,29 @@ TEST_CASE("stack depth is constant") {
         CHECK(*stack_depth == current_stack_depth);
     };
 
-    std::optional<std::function<nr::nonrec<int>(int)>> f;
+    std::optional<std::function<nr::nonrec<void>(int)>> f;
     SUBCASE("deep recursion") {
-        f = [&](int depth) -> nr::nonrec<int> {
+        f = [&](int depth) -> nr::nonrec<void> {
             check_stack_depth();
             if (depth > 0) {
                 co_await (*f)(depth - 1);
+            } else {
+                reached_end = true;
             }
-            co_return 0; // TODO: support void return type
         };
     }
     SUBCASE("wide recursion") {
-        f = [&](int depth) -> nr::nonrec<int> {
+        f = [&](int depth) -> nr::nonrec<void> {
             check_stack_depth();
             if (depth > 0) {
                 co_await (*f)(depth - 1);
                 co_await (*f)(depth - 1);
+            } else {
+                reached_end = true;
             }
-            co_return 0; // TODO: support void return type
         };
     }
 
     (*f)(10).get();
+    CHECK(reached_end);
 }
