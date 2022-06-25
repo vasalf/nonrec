@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: turtlebrowser/get-conan@main
       - run: sudo apt-get install -y autopoint
-      - run: conan install . --profile ${{ matrix.profile.filename }} -pr:b=${{ matrix.profile.filename }} -pr:h=${{ matrix.profile.filename }} --build=missing
+      - run: conan install . -pr:b=${{ matrix.profile.filename }} -pr:h=${{ matrix.profile.filename }} -s build_type=${{ matrix.build_type }} --build=missing
       - run: cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DCMAKE_CXX_COMPILER=${{ matrix.profile.compiler }} -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
       - run: cat compile_commands.json
       - run: cmake --build .
