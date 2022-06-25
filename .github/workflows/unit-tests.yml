@@ -5,12 +5,12 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        build_type: [Release, Debug]
         profile:
           - compiler: g++
             filename: ./conan/gcc.profile
           - compiler: clang++
             filename: ./conan/clang.profile
+        build_type: [Release, Debug]
     steps:
       - uses: actions/checkout@v3
       - uses: turtlebrowser/get-conan@main
