@@ -6,6 +6,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: turtlebrowser/get-conan@main
+      - run: apt install -y autopoint
       - run: conan install . -pr:b=default --build=missing
       - run: cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release
       - run: cmake --build .
