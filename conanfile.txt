@@ -3,6 +3,7 @@ libunwind/1.6.2
 elfutils/0.186
 doctest/2.4.9
 benchmark/1.6.1
+zstd/1.5.2
 
 [generators]
 CMakeDeps
