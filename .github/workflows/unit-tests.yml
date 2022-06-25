@@ -10,7 +10,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: turtlebrowser/get-conan@main
       - run: sudo apt-get install -y autopoint
-      - run: conan install . -pr:b=default --build=missing
+      - run: conan install . -pr:b=default -s build_type=${{ matrix.build_type }} --build=missing
       - run: cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
       - run: cmake --build .
       - run: ./nonrec-test
