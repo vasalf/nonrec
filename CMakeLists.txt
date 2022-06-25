@@ -9,9 +9,10 @@ find_package(doctest REQUIRED)
 find_package(libunwind REQUIRED)
 find_package(benchmark REQUIRED)
 find_package(elfutils REQUIRED)
+find_package(ZLIB REQUIRED)
 
 add_executable(nonrec-test test/main.cpp)
-target_link_libraries(nonrec-test PRIVATE doctest::doctest libunwind::libunwind elfutils::elfutils)
+target_link_libraries(nonrec-test PRIVATE doctest::doctest libunwind::libunwind elfutils::elfutils ZLIB::ZLIB)
 
 add_executable(nonrec-bench bench/main.cpp)
 target_link_libraries(nonrec-bench PRIVATE benchmark::benchmark)
