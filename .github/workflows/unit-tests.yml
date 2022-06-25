@@ -8,9 +8,9 @@ jobs:
         build_type: [Release, Debug]
         profile:
           - compiler: g++
-            filename: ../conan/gcc.profile
+            filename: ./conan/gcc.profile
           - compiler: clang++
-            filename: ../conan/clang.profile
+            filename: ./conan/clang.profile
     steps:
       - uses: actions/checkout@v3
       - uses: turtlebrowser/get-conan@main
