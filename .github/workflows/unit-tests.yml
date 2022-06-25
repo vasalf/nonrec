@@ -7,10 +7,10 @@ jobs:
       matrix:
         build_type: [Release, Debug]
         profile:
-          - filename: conan/gcc.profile
-            compiler: g++
-          - filename: conan/clang.profile
-            compiler: clang++
+          - compiler: g++
+            filename: ../conan/gcc.profile
+          - compiler: clang++
+            filename: ../conan/clang.profile
     steps:
       - uses: actions/checkout@v3
       - uses: turtlebrowser/get-conan@main
