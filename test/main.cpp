@@ -177,6 +177,6 @@ TEST_CASE("stack depth is constant") {
         };
     }
 
-    (*f)(10).get();
+    (*f)(5).get();
     CHECK(reached_end);
 }
