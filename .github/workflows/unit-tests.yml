@@ -6,12 +6,17 @@ jobs:
     strategy:
       matrix:
         build_type: [Release, Debug]
+        profile:
+          - filename: conan/gcc.profile
+            compiler: g++
+          - filename: conan/clang.profile
+            compiler: clang++
     steps:
       - uses: actions/checkout@v3
       - uses: turtlebrowser/get-conan@main
       - run: sudo apt-get install -y autopoint
-      - run: conan install . -pr:b=default -s build_type=${{ matrix.build_type }} --build=missing
-      - run: cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+      - run: conan install . -pr:b=${{ matrix.profile.filename }} -pr:h=${{ matrix.profile.filename }} --build=missing
+      - run: cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DCMAKE_CXX_COMPILER=${{ matrix.profile.compiler }}
       - run: cmake --build .
       - run: ./nonrec-test
-
+      - run: ./nonrec-bench

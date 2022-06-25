@@ -4,7 +4,22 @@
 #error C++20 support is required.
 #endif
 
+#if defined(__clang__) && !defined(_LIBCPP_VERSION)
+#error libc++ required for coroutines in clang to work
+#endif
+
+#if defined(__clang__) && __clang_major__ < 14
+
+#include <experimental/coroutine>
+namespace coro = std::experimental;
+
+#else
+
 #include <coroutine>
+namespace coro = std;
+
+#endif
+
 #include <optional>
 #include <stack>
 #include <type_traits>
@@ -23,12 +38,12 @@ struct suspend_if {
         return !condition;
     }
 
-    void await_suspend(std::coroutine_handle<>) {}
+    void await_suspend(coro::coroutine_handle<>) {}
     void await_resume() {}
 };
 
 struct promise_base {
-    std::stack<std::coroutine_handle<>>* stack = nullptr;
+    std::stack<coro::coroutine_handle<>>* stack = nullptr;
 
     promise_base() = default;
 
@@ -51,7 +66,7 @@ struct promise : promise_base {
     promise() = default;
 
     auto final_suspend() noexcept {
-        return std::suspend_always{};
+        return coro::suspend_always{};
     }
 
     nonrec<T> get_return_object();
@@ -64,7 +79,7 @@ struct promise<void> : promise_base {
     promise() = default;
 
     auto final_suspend() noexcept {
-        return std::suspend_never{};
+        return coro::suspend_never{};
     }
 
     inline nonrec<void> get_return_object();
@@ -78,7 +93,7 @@ struct awaitable {
     bool await_ready();
 
     template <typename S>
-    void await_suspend(std::coroutine_handle<promise<S>>& waitee);
+    void await_suspend(coro::coroutine_handle<promise<S>> waitee);
 
     T await_resume();
 };
@@ -86,8 +101,8 @@ struct awaitable {
 } // namespace detail
 
 template <typename T>
-struct nonrec : std::coroutine_handle<detail::promise<T>> {
-    using base_type = std::coroutine_handle<detail::promise<T>>;
+struct nonrec : coro::coroutine_handle<detail::promise<T>> {
+    using base_type = coro::coroutine_handle<detail::promise<T>>;
     using promise_type = detail::promise<T>;
 
     nonrec(base_type&& handle);
@@ -140,7 +155,7 @@ bool detail::awaitable<T>::await_ready() {
 
 template <typename T>
 template <typename S>
-void detail::awaitable<T>::await_suspend(std::coroutine_handle<promise<S>>& waitee) {
+void detail::awaitable<T>::await_suspend(coro::coroutine_handle<promise<S>> waitee) {
     handle.promise().stack->push(waitee);
     handle.promise().stack->push(handle);
 }
@@ -180,7 +195,7 @@ detail::awaitable<T> nonrec<T>::operator co_await() {
 
 template <typename T>
 T nonrec<T>::get() && {
-    std::stack<std::coroutine_handle<>> stack;
+    std::stack<coro::coroutine_handle<>> stack;
     this->promise().stack = &stack;
     this->resume();
     while (!stack.empty()) {
