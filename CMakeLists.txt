@@ -5,9 +5,13 @@ set(CMAKE_CXX_STANDARD 20)
 
 include_directories(include/)
 
-include(CTest)
 find_package(doctest REQUIRED)
 find_package(libunwind REQUIRED)
+find_package(benchmark REQUIRED)
+find_package(elfutils REQUIRED)
 
 add_executable(nonrec-test test/main.cpp)
-target_link_libraries(nonrec-test PRIVATE doctest::doctest libunwind::libunwind)
+target_link_libraries(nonrec-test PRIVATE doctest::doctest libunwind::libunwind elfutils::elfutils)
+
+add_executable(nonrec-bench bench/main.cpp)
+target_link_libraries(nonrec-bench PRIVATE benchmark::benchmark)

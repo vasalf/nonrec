@@ -1,8 +1,11 @@
+#include <libdw.h>
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest/doctest.h>
 
 #include <nonrec.h>
 #include <libunwind.h>
+#include <elfutils/libdwfl.h>
+#include <cxxabi.h>
 
 nr::nonrec<int> factorial(int n) {
     if (n == 0) {
@@ -47,31 +50,90 @@ TEST_CASE("smoke: void return type") {
     CHECK(reached_end);
 }
 
-int get_stack_depth() {
+std::string demangle(std::string name) {
+    int status;
+    char *buf = abi::__cxa_demangle(name.c_str(), nullptr, nullptr, &status);
+    if (!buf) {
+        return name;
+    }
+    std::string ret{buf};
+    free(buf);
+    return ret;
+}
+
+std::string get_debug_info(unw_cursor_t *cp) {
+    struct Dwfl_deleter {
+        void operator()(Dwfl *dwfl) {
+            dwfl_end(dwfl);
+        }
+    };
+
+    char* debuginfo_path = nullptr;
+    Dwfl_Callbacks callbacks = {
+        .find_elf = dwfl_linux_proc_find_elf,
+        .find_debuginfo = dwfl_standard_find_debuginfo,
+        .debuginfo_path = &debuginfo_path
+    };
+    std::unique_ptr<Dwfl, Dwfl_deleter> dwfl(dwfl_begin(&callbacks));
+    dwfl_linux_proc_report(dwfl.get(), getpid());
+    dwfl_report_end(dwfl.get(), nullptr, nullptr);
+
+    unw_word_t unw_ip;
+    unw_get_reg(cp, UNW_REG_IP, &unw_ip);
+    Dwarf_Addr ip = static_cast<Dwarf_Addr>(unw_ip);
+
+    Dwfl_Module* module = dwfl_addrmodule(dwfl.get(), ip);
+    const char* fun = dwfl_module_addrname(module, ip);
+    std::ostringstream ret;
+    ret << demangle(fun);
+
+    Dwfl_Line* line_info = dwfl_getsrc(dwfl.get(), ip);
+    if (line_info) {
+        Dwarf_Addr addr;
+        int line;
+        const char *filename = dwfl_lineinfo(line_info, &addr, &line, nullptr, nullptr, nullptr);
+        ret << " (" << filename << ":" << line << ")";
+    }
+
+    return ret.str();
+}
+
+std::vector<std::string> get_stacktrace() {
     unw_context_t context;
     unw_getcontext(&context);
 
     unw_cursor_t cursor;
     unw_init_local(&cursor, &context);
 
-    int ret = 0;
-    while (unw_step(&cursor) > 0) {
-        ret++;
-    }
+    std::vector<std::string> ret;
+    do {
+        ret.emplace_back(get_debug_info(&cursor));
+    } while (unw_step(&cursor) > 0);
 
     return ret;
 }
 
+std::string stringify_stacktrace(std::vector<std::string> stacktrace) {
+    std::ostringstream ret;
+    ret << std::endl;
+    for (const auto& frame : stacktrace) {
+        ret << frame << std::endl;
+    }
+    return ret.str();
+}
+
 TEST_CASE("stack depth is constant") {
     bool reached_end = false;
-    std::optional<int> stack_depth;
+    std::optional<std::vector<std::string>> stacktrace;
 
     auto check_stack_depth = [&]() {
-        int current_stack_depth = get_stack_depth();
-        if (!stack_depth) {
-            stack_depth = current_stack_depth;
+        auto current_stacktrace = get_stacktrace();
+        if (!stacktrace) {
+            stacktrace = current_stacktrace;
         }
-        CHECK(*stack_depth == current_stack_depth);
+        CAPTURE(stringify_stacktrace(*stacktrace));
+        CAPTURE(stringify_stacktrace(current_stacktrace));
+        REQUIRE(stacktrace->size() == current_stacktrace.size());
     };
 
     std::optional<std::function<nr::nonrec<void>(int)>> f;
@@ -97,6 +159,6 @@ TEST_CASE("stack depth is constant") {
         };
     }
 
-    (*f)(10).get();
+    (*f)(5).get();
     CHECK(reached_end);
 }

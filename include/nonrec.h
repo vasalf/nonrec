@@ -39,7 +39,9 @@ struct promise_base {
     template <typename S>
     nonrec<S> await_transform(nonrec<S> expr);
 
-    void unhandled_exception();
+    void unhandled_exception() {
+        std::terminate();
+    }
 };
 
 template <typename T>
@@ -65,7 +67,7 @@ struct promise<void> : promise_base {
         return std::suspend_never{};
     }
 
-    nonrec<void> get_return_object();
+    inline nonrec<void> get_return_object();
     void return_void() {}
 };
 
@@ -76,7 +78,7 @@ struct awaitable {
     bool await_ready();
 
     template <typename S>
-    std::coroutine_handle<promise<T>> await_suspend(std::coroutine_handle<promise<S>>& waitee);
+    void await_suspend(std::coroutine_handle<promise<S>>& waitee);
 
     T await_resume();
 };
@@ -109,10 +111,6 @@ nonrec<S> detail::promise_base::await_transform(nonrec<S> expr) {
     return expr;
 }
 
-void detail::promise_base::unhandled_exception() {
-    std::terminate();
-}
-
 template <typename T>
 nonrec<T> detail::promise<T>::get_return_object() {
     return nonrec<T>::from_promise(*this);
@@ -128,7 +126,7 @@ void detail::promise<T>::return_value(T&& v) {
     value.emplace(std::move(v));
 }
 
-nonrec<void> detail::promise<void>::get_return_object() {
+inline nonrec<void> detail::promise<void>::get_return_object() {
     return nonrec<void>::from_promise(*this);
 }
 
@@ -142,9 +140,9 @@ bool detail::awaitable<T>::await_ready() {
 
 template <typename T>
 template <typename S>
-std::coroutine_handle<detail::promise<T>> detail::awaitable<T>::await_suspend(std::coroutine_handle<promise<S>>& waitee) {
+void detail::awaitable<T>::await_suspend(std::coroutine_handle<promise<S>>& waitee) {
     handle.promise().stack->push(waitee);
-    return handle;
+    handle.promise().stack->push(handle);
 }
 
 template <typename T>
