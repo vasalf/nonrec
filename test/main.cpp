@@ -85,7 +85,11 @@ std::string get_debug_info(unw_cursor_t *cp) {
     Dwfl_Module* module = dwfl_addrmodule(dwfl.get(), ip);
     const char* fun = dwfl_module_addrname(module, ip);
     std::ostringstream ret;
-    ret << demangle(fun);
+    if (fun) {
+        ret << demangle(fun);
+    } else {
+        ret << "[" << ip << "]";
+    }
 
     Dwfl_Line* line_info = dwfl_getsrc(dwfl.get(), ip);
     if (line_info) {
