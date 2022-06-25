@@ -113,6 +113,21 @@ std::vector<std::string> get_stacktrace() {
     return ret;
 }
 
+int get_stack_depth() {
+    unw_context_t context;
+    unw_getcontext(&context);
+
+    unw_cursor_t cursor;
+    unw_init_local(&cursor, &context);
+
+    int ret = 0;
+    do {
+        ret++;
+    } while (unw_step(&cursor) > 0);
+
+    return ret;
+}
+
 std::string stringify_stacktrace(std::vector<std::string> stacktrace) {
     std::ostringstream ret;
     ret << std::endl;
@@ -127,13 +142,16 @@ TEST_CASE("stack depth is constant") {
     std::optional<std::vector<std::string>> stacktrace;
 
     auto check_stack_depth = [&]() {
-        auto current_stacktrace = get_stacktrace();
         if (!stacktrace) {
-            stacktrace = current_stacktrace;
+            stacktrace = get_stacktrace();
         }
-        CAPTURE(stringify_stacktrace(*stacktrace));
-        CAPTURE(stringify_stacktrace(current_stacktrace));
-        REQUIRE(stacktrace->size() == current_stacktrace.size());
+        int stacktrace_size = get_stack_depth();
+        if (stacktrace->size() != stacktrace_size) {
+            auto current_stacktrace = get_stacktrace();
+            CAPTURE(stringify_stacktrace(*stacktrace));
+            CAPTURE(stringify_stacktrace(current_stacktrace));
+            REQUIRE(stacktrace->size() == current_stacktrace.size());
+        }
     };
 
     std::optional<std::function<nr::nonrec<void>(int)>> f;
@@ -159,6 +177,6 @@ TEST_CASE("stack depth is constant") {
         };
     }
 
-    (*f)(5).get();
+    (*f)(10).get();
     CHECK(reached_end);
 }
