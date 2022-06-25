@@ -6,7 +6,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: turtlebrowser/get-conan@main
-      - run: conan install . --profile default --build=missing
+      - run: conan install . -pr:b=default --build=missing
       - run: cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake
       - run: cmake --build .
       - run: ./nonrec-test
