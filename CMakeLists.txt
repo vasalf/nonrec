@@ -33,7 +33,7 @@ set (BENCHMARK_STACK_SIZE 67108864) # 64 MiB
 if (MSVC)
     set_target_properties(nonrec-bench PROPERTIES LINK_FLAGS "/STACK:${BENCHMARK_STACK_SIZE}")
 elseif (APPLE)
-    set_target_properties(nonrec-bench PROPERTIES LINK_FLAGS "-Wl,-stack_size -Wl,${BENCHMARK_STACK_SIZE}")
+    set_target_properties(nonrec-bench PROPERTIES LINK_FLAGS "-Wl,-stack_size=${BENCHMARK_STACK_SIZE}")
 else ()
     set_target_properties(nonrec-bench PROPERTIES LINK_FLAGS "-Wl,-z,stack-size=${BENCHMARK_STACK_SIZE}")
 endif ()
