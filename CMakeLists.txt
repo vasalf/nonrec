@@ -29,7 +29,9 @@ add_executable(nonrec-bench bench/main.cpp)
 target_link_libraries(nonrec-bench PRIVATE benchmark::benchmark)
 
 # The benchmark also runs recursive DFS which does not fit into default stack sizes.
-set (BENCHMARK_STACK_SIZE 67108864) # 64 MiB
+set (BENCHMARK_STACK_SIZE "0x4000000") # 64 MiB
+                                       # Also, the damned Apple Clang is the only compiler to assume 
+                                       # the stack size is always given in hexadecimal.
 if (MSVC)
     set_target_properties(nonrec-bench PROPERTIES LINK_FLAGS "/STACK:${BENCHMARK_STACK_SIZE}")
 elseif (APPLE)
