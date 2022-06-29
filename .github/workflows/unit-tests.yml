@@ -25,7 +25,8 @@ jobs:
   windows:
     runs-on: windows-latest
     strategy:
-      build_type: [Release, Debug]
+      matrix:
+        build_type: [Release, Debug]
     steps:
       - uses: actions/checkout@v3
       - run: cmake . -DCMAKE_TOOLCHAIN_FILE=%VCPKG_ROOT%\scripts\buildsystems\vcpkg.cmake
