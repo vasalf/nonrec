@@ -29,6 +29,7 @@ jobs:
         build_type: [Release, Debug]
     steps:
       - uses: actions/checkout@v3
+      - uses: lukka/get-vcpkg@main
       - run: cmake . -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake"
       - run: cmake --build . --config ${{ matrix.build_type }}
       - run: .\${{ matrix.build_type }}\nonrec-test.exe
