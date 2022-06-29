@@ -21,6 +21,10 @@ add_executable(nonrec-test test/main.cpp)
 target_include_directories(nonrec-test PRIVATE ${Boost_INCLUDE_DIR})
 target_link_libraries(nonrec-test PRIVATE doctest::doctest  )
 
+if (APPLE)
+    target_compile_definitions(nonrec-test PRIVATE _GNU_SOURCE)
+endif ()
+
 add_executable(nonrec-bench bench/main.cpp)
 target_link_libraries(nonrec-bench PRIVATE benchmark::benchmark)
 
