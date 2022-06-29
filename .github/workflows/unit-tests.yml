@@ -33,7 +33,7 @@ jobs:
         with:
           repository: Microsoft/vcpkg
           path: vcpkg
-          fetch-depth: 1
+          ref: 3f71620c2b348874346a6e78b3de32a53eb23248
       - run: .\vcpkg\bootstrap-vcpkg.bat
       - run: cmake . -DCMAKE_TOOLCHAIN_FILE=".\vcpkg\scripts\buildsystems\vcpkg.cmake"
       - run: cmake --build . --config ${{ matrix.build_type }}
