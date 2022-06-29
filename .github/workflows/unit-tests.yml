@@ -55,6 +55,7 @@ jobs:
       - run: ./vcpkg/bootstrap-vcpkg.sh
       - run: cmake . -DCMAKE_TOOLCHAIN_FILE="./vcpkg/scripts/buildsystems/vcpkg.cmake"
       - run: cmake --build . --config ${{ matrix.build_type }}
-      - run: ./${{ matrix.build_type }}/nonrec-test
-      - run: ./${{ matrix.build_type }}/nonrec-bench
+      - run: ls . ${{ matrix.build_type }}
+      - run: ./nonrec-test
+      - run: ./nonrec-bench
         
