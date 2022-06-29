@@ -23,3 +23,9 @@ target_link_libraries(nonrec-test PRIVATE doctest::doctest  )
 
 add_executable(nonrec-bench bench/main.cpp)
 target_link_libraries(nonrec-bench PRIVATE benchmark::benchmark)
+
+if (MSVC)
+    # The benchmark also runs recursive DFS which does not fit into
+    # MSVC's default 1MiB stack.
+    set_target_properties(nonrec-bench PROPERTIES LINK_FLAGS "/STACK:67108864")
+endif ()
