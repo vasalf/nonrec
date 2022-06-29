@@ -1,7 +1,16 @@
 #pragma once
 
-#if __cplusplus < 202002L
+#if defined(_MSC_VER) && __cplusplus == 199711L
+
+#pragma message("WARNING: Unable to determine C++ standard version. Consider adding" \
+                " /Zc:__cplusplus to the compiler flags. See" \
+                " https://devblogs.microsoft.com/cppblog/msvc-now-correctly-reports-__cplusplus/" \
+                " for more information.")
+                
+#elif __cplusplus < 202002L
+
 #error C++20 support is required.
+
 #endif
 
 #if defined(__clang__) && !defined(_LIBCPP_VERSION)

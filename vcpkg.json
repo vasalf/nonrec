@@ -1,0 +1,19 @@
+{
+    "name": "nonrec",
+    "version": "0.1",
+    "dependencies": [
+        {
+            "name": "doctest",
+            "version>=": "2.4.9"
+        },
+        {
+            "name": "benchmark",
+            "version>=": "1.6.1"
+        },
+        {
+            "name": "boost-stacktrace",
+            "version>=": "1.79.0"
+        }
+    ],
+    "builtin-baseline": "3f71620c2b348874346a6e78b3de32a53eb23248"
+}

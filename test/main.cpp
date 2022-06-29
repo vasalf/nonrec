@@ -1,9 +1,13 @@
-#include <boost/stacktrace/stacktrace_fwd.hpp>
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest/doctest.h>
+
 #include <boost/stacktrace.hpp>
 
+#include <functional>
+
 #include <nonrec.h>
+
+namespace {
 
 nr::nonrec<int> factorial(int n) {
     if (n == 0) {
@@ -11,6 +15,8 @@ nr::nonrec<int> factorial(int n) {
     }
     co_return n * co_await factorial(n - 1);
 }
+
+} // namespace <anonymous>
 
 TEST_CASE("smoke: factorial") {
     for (int n = 0, fct = 1; n <= 10; n++) {
@@ -48,11 +54,15 @@ TEST_CASE("smoke: void return type") {
     CHECK(reached_end);
 }
 
+namespace {
+    
 std::string stringify_stacktrace(const boost::stacktrace::stacktrace& stacktrace) {
     std::ostringstream ss;
     ss << stacktrace;
     return ss.str();
 }
+
+} // namespace <anonymous>
 
 TEST_CASE("stack depth is constant") {
     bool reached_end = false;
