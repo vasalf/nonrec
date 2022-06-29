@@ -4,6 +4,7 @@
 #include <boost/stacktrace.hpp>
 
 #include <functional>
+#include <optional>
 
 #include <nonrec.h>
 
@@ -77,30 +78,65 @@ TEST_CASE("stack depth is constant") {
         CAPTURE(stringify_stacktrace(current_stacktrace));
         REQUIRE(stacktrace->size() == current_stacktrace.size());
     };
-
-    std::optional<std::function<nr::nonrec<void>(int)>> f;
-    SUBCASE("deep recursion") {
-        f = [&](int depth) -> nr::nonrec<void> {
-            check_stack_depth();
-            if (depth > 0) {
-                co_await (*f)(depth - 1);
-            } else {
-                reached_end = true;
+    
+    std::function<nr::nonrec<void>(int, bool)> test_void = [&](int depth, bool wide) -> nr::nonrec<void> {
+        check_stack_depth();
+        if (depth > 0) {
+            co_await test_void(depth - 1, wide);
+            if (wide) {
+                co_await test_void(depth - 1, wide);
             }
+        } else {
+            reached_end = true;
+        }
+    };
+    
+    std::function<nr::nonrec<int>(int, bool)> test_int = [&](int depth, bool wide) -> nr::nonrec<int> {
+        int leaves = 0;
+        check_stack_depth();
+        if (depth > 0) {
+            leaves += co_await test_int(depth - 1, wide);
+            if (wide) {
+                leaves += co_await test_int(depth - 1, wide);
+            }
+        } else {
+            reached_end = true;
+            leaves = 1;
+        }
+        co_return leaves;
+    };
+
+    std::optional<std::function<void(int)>> f;
+    SUBCASE("return void") {
+        bool wide;
+        SUBCASE("deep recursion") {
+            wide = false;
+        }
+        SUBCASE("wide recursion") {
+            wide = true;
+        }
+        
+        f = [&, wide](int depth) {
+            test_void(depth, wide).get();
         };
     }
-    SUBCASE("wide recursion") {
-        f = [&](int depth) -> nr::nonrec<void> {
-            check_stack_depth();
-            if (depth > 0) {
-                co_await (*f)(depth - 1);
-                co_await (*f)(depth - 1);
-            } else {
-                reached_end = true;
-            }
+    SUBCASE("return int") {
+        bool wide;
+        std::optional<std::function<int(int)>> expected_ret;
+        SUBCASE("deep recursion") {
+            wide = false;
+            expected_ret = [](int) { return 1; };
+        }
+        SUBCASE("wide recursion") {
+            wide = true;
+            expected_ret = [](int depth) { return 1 << depth; };
+        }
+        
+        f = [&, wide, expected_ret](int depth) {
+            CHECK((*expected_ret)(depth) == test_int(depth, wide).get());
         };
     }
 
-    (*f)(10).get();
+    (*f)(10);
     CHECK(reached_end);
 }
