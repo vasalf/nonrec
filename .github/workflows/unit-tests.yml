@@ -39,3 +39,22 @@ jobs:
       - run: cmake --build . --config ${{ matrix.build_type }}
       - run: .\${{ matrix.build_type }}\nonrec-test.exe
       - run: .\${{ matrix.build_type }}\nonrec-bench.exe
+      
+  macos:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        build_type: [Release, Debug]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
+        with:
+          repository: Microsoft/vcpkg
+          path: vcpkg
+          ref: 3f71620c2b348874346a6e78b3de32a53eb23248
+      - run: ./vcpkg/bootstrap-vcpkg.sh
+      - run: cmake . -DCMAKE_TOOLCHAIN_FILE="./vcpkg/scripts/buildsystems/vcpkg.cmake"
+      - run: cmake --build . --config ${{ matrix.build_type }}
+      - run: ./${{ matrix.build_type }}/nonrec-test
+      - run: ./${{ matrix.build_type }}/nonrec-bench
+        
