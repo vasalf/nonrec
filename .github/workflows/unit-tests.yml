@@ -2,6 +2,7 @@ name: Unit Tests
 on: [push]
 jobs:
   linux:
+    name: ${{ matrix.profile.compiler }} (${{ matrix.build_type }})
     runs-on: ubuntu-22.04
     strategy:
       matrix:
@@ -12,49 +13,76 @@ jobs:
             filename: ./conan/clang.profile
         build_type: [Release, Debug]
     steps:
-      - uses: actions/checkout@v3
-      - uses: turtlebrowser/get-conan@main
-      - run: sudo apt-get install -y autopoint
-      - run: conan install . -pr:b=${{ matrix.profile.filename }} -pr:h=${{ matrix.profile.filename }} -s build_type=${{ matrix.build_type }} --build=missing
-      - run: cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DCMAKE_CXX_COMPILER=${{ matrix.profile.compiler }} -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-      - run: cat compile_commands.json
-      - run: cmake --build .
-      - run: ./nonrec-test
-      - run: ./nonrec-bench
+      - name: Checkout the repository
+        uses: actions/checkout@v3
+      - name: Get conan
+        uses: turtlebrowser/get-conan@main
+      - name: Install build dependencies
+        run: sudo apt-get install -y autopoint
+      - name: Build runtime dependencies
+        run: conan install . -pr:b=${{ matrix.profile.filename }} -pr:h=${{ matrix.profile.filename }} -s build_type=${{ matrix.build_type }} --build=missing
+      - name: Configure
+        run: cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DCMAKE_CXX_COMPILER=${{ matrix.profile.compiler }} -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+      - name: Print compile commands
+        run: cat compile_commands.json
+      - name: Build
+        run: cmake --build .
+      - name: Test
+        run: ./nonrec-test
+      - name: Benchmark
+        run: ./nonrec-bench
       
   windows:
+    name: msvc (${{ matrix.build_type }})
     runs-on: windows-latest
     strategy:
       matrix:
         build_type: [Release, Debug]
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/checkout@v3
+      - name: Checkout the repository
+        uses: actions/checkout@v3
+      - name: Checkout vcpkg
+        uses: actions/checkout@v3
         with:
           repository: Microsoft/vcpkg
           path: vcpkg
           ref: 3f71620c2b348874346a6e78b3de32a53eb23248
-      - run: .\vcpkg\bootstrap-vcpkg.bat
-      - run: cmake . -DCMAKE_TOOLCHAIN_FILE=".\vcpkg\scripts\buildsystems\vcpkg.cmake"
-      - run: cmake --build . --config ${{ matrix.build_type }}
-      - run: .\${{ matrix.build_type }}\nonrec-test.exe
-      - run: .\${{ matrix.build_type }}\nonrec-bench.exe
+      - name: Install vcpkg
+        run: .\vcpkg\bootstrap-vcpkg.bat
+      - name: Configure
+        run: cmake . -DCMAKE_TOOLCHAIN_FILE=".\vcpkg\scripts\buildsystems\vcpkg.cmake"
+      - name: Build
+        run: cmake --build . --config ${{ matrix.build_type }}
+      - name: Test
+        run: .\${{ matrix.build_type }}\nonrec-test.exe
+      - name: Benchmark
+        run: .\${{ matrix.build_type }}\nonrec-bench.exe
       
   macos:
+    name: apple clang (${{ matrix.build_type }})
     runs-on: macos-latest
     strategy:
       matrix:
         build_type: [Release, Debug]
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/checkout@v3
+      - name: Checkout the repository
+        uses: actions/checkout@v3
+      - name: Checkout vcpkg
+        uses: actions/checkout@v3
         with:
           repository: Microsoft/vcpkg
           path: vcpkg
           ref: 3f71620c2b348874346a6e78b3de32a53eb23248
-      - run: ./vcpkg/bootstrap-vcpkg.sh
-      - run: cmake . -DCMAKE_TOOLCHAIN_FILE="./vcpkg/scripts/buildsystems/vcpkg.cmake"
-      - run: cmake --build . --config ${{ matrix.build_type }}
-      - run: ./nonrec-test
-      - run: ./nonrec-bench
+      - name: Install vcpkg
+        run: ./vcpkg/bootstrap-vcpkg.sh
+      - name: Configure
+        run: cmake . -DCMAKE_TOOLCHAIN_FILE="./vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+      - name: Print compile commands
+        run: cat compile_commands.json
+      - name: Build
+        run: cmake --build . --config ${{ matrix.build_type }}
+      - name: Test
+        run: ./nonrec-test
+      - name: Benchmark
+        run: ./nonrec-bench
         
