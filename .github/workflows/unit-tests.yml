@@ -29,7 +29,7 @@ jobs:
         build_type: [Release, Debug]
     steps:
       - uses: actions/checkout@v3
-      - run: cmake . -DCMAKE_TOOLCHAIN_FILE=%VCPKG_ROOT%\scripts\buildsystems\vcpkg.cmake
+      - run: cmake . -DCMAKE_TOOLCHAIN_FILE="%VCPKG_ROOT%\scripts\buildsystems\vcpkg.cmake"
       - run: cmake --build . --config ${{ matrix.build_type }}
       - run: .\${{ matrix.build_type }}\nonrec-test.exe
       - run: .\${{ matrix.build_type }}\nonrec-bench.exe
