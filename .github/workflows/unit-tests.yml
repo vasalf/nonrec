@@ -30,7 +30,7 @@ jobs:
       - name: Test
         run: ./nonrec-test
       - name: Benchmark
-        run: ./nonrec-bench
+        run: ulimit -s 65536 && ./nonrec-bench
       
   windows:
     name: msvc (${{ matrix.build_type }})
