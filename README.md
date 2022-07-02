@@ -58,7 +58,7 @@ int main() {
         int prev = co_await factorial(n - 1, mod);
         co_return (static_cast<long long>(n) * prev) % mod;
     };
-    std::cout << factorial(1'000'000, 179) << std::endl;
+    std::cout << factorial(1'000'000, 179).get() << std::endl;
 }
 ```
 
