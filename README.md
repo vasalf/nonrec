@@ -76,3 +76,4 @@ nonrec is a one-header library with no dependencies except for STL. Simply copy 
 
 1. nonrec requires C++20 coroutines to work, which, in order, requires a fairly new compiler. It has been tested against GCC >= 11, LLVM >= 13, MSVC >= 19 and Apple Clang >= 13. It also requires C++20 standard to be enabled.
 2. Executing frequently stopping coroutines is fairly slow. You can expect a 7-10x overhead on call/return actions, depending on the compiler. You can consult the `Benchmark` task of the latest GitHub Actions build to see the results for your compiler.
+3. At this point, throwing uncaught exceptions within the functions will cause `std::terminate`.
