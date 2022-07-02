@@ -42,7 +42,7 @@ The factorial will be calculated using a heap-allocated dynamic stack, without c
 
 ### Lambda functions
 
-Using `nonrec` within lambda functions is possible, though requires a somewhat more explicit syntax:,
+Using `nonrec` within lambda functions is possible, though requires a somewhat more explicit syntax:
 
 ```C++
 #include <nonrec.h>
