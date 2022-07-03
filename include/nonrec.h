@@ -23,6 +23,10 @@
 
 #pragma once
 
+#include <optional>
+#include <stack>
+#include <type_traits>
+
 #if defined(_MSC_VER) && __cplusplus == 199711L
 
 #pragma message("WARNING: Unable to determine C++ standard version. Consider adding" \
@@ -52,10 +56,6 @@ namespace coro = std;
 
 #endif
 
-#include <optional>
-#include <stack>
-#include <type_traits>
-
 namespace nr {
 
 template <typename T>
@@ -63,24 +63,13 @@ struct nonrec;
 
 namespace detail {
 
-struct suspend_if {
-    bool condition;
-
-    bool await_ready() {
-        return !condition;
-    }
-
-    void await_suspend(coro::coroutine_handle<>) {}
-    void await_resume() {}
-};
-
 struct promise_base {
     std::stack<coro::coroutine_handle<>>* stack = nullptr;
 
     promise_base() = default;
 
     auto initial_suspend() {
-        return suspend_if{stack == nullptr};
+        return coro::suspend_always{};
     }
 
     template <typename S>
