@@ -1,3 +1,4 @@
+#include "boost/stacktrace/stacktrace_fwd.hpp"
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest/doctest.h>
 
@@ -63,13 +64,10 @@ std::string stringify_stacktrace(const boost::stacktrace::stacktrace& stacktrace
     return ss.str();
 }
 
-} // namespace <anonymous>
-
-TEST_CASE("stack depth is constant") {
-    bool reached_end = false;
+struct stacktrace_checker {
     std::optional<boost::stacktrace::stacktrace> stacktrace;
 
-    auto check_stack_depth = [&]() {
+    void check() {
         auto current_stacktrace = boost::stacktrace::stacktrace();
         if (!stacktrace) {
             stacktrace = current_stacktrace;
@@ -77,10 +75,17 @@ TEST_CASE("stack depth is constant") {
         CAPTURE(stringify_stacktrace(*stacktrace));
         CAPTURE(stringify_stacktrace(current_stacktrace));
         REQUIRE(stacktrace->size() == current_stacktrace.size());
-    };
+    }
+};
+
+} // namespace <anonymous>
+
+TEST_CASE("stack depth is constant") {
+    bool reached_end = false;
+    stacktrace_checker stacktrace;
     
     std::function<nr::nonrec<void>(int, bool)> test_void = [&](int depth, bool wide) -> nr::nonrec<void> {
-        check_stack_depth();
+        stacktrace.check();
         if (depth > 0) {
             co_await test_void(depth - 1, wide);
             if (wide) {
@@ -93,7 +98,7 @@ TEST_CASE("stack depth is constant") {
     
     std::function<nr::nonrec<int>(int, bool)> test_int = [&](int depth, bool wide) -> nr::nonrec<int> {
         int leaves = 0;
-        check_stack_depth();
+        stacktrace.check();
         if (depth > 0) {
             leaves += co_await test_int(depth - 1, wide);
             if (wide) {
@@ -139,4 +144,32 @@ TEST_CASE("stack depth is constant") {
 
     (*f)(10);
     CHECK(reached_end);
+}
+
+TEST_CASE("stack depth is constant in mutual recursion") {
+    stacktrace_checker checker;
+
+    std::function<nr::nonrec<void>(int)> foo;
+    std::function<nr::nonrec<int>(int)> bar;
+
+    int calls = 0;
+
+    foo = [&](int depth) -> nr::nonrec<void> {
+        checker.check();
+        if (depth > 1) {
+            co_await bar(depth - 1);
+        }
+        ++calls;
+    };
+    bar = [&](int depth) -> nr::nonrec<int> {
+        checker.check();
+        if (depth > 1) {
+            co_await foo(depth - 1);
+        }
+        ++calls;
+        co_return 0;
+    };
+
+    foo(10).get();
+    CHECK(calls == 10);
 }
