@@ -82,7 +82,7 @@ struct promise_base {
 
 template <typename T>
 struct promise : promise_base {
-    std::optional<T> value;
+    std::optional<T> returned_value;
 
     promise() = default;
 
@@ -154,12 +154,12 @@ nonrec<T> detail::promise<T>::get_return_object() {
 
 template <typename T>
 void detail::promise<T>::return_value(const T &v) {
-    value.emplace(v);
+    returned_value.emplace(v);
 }
 
 template <typename T>
 void detail::promise<T>::return_value(T&& v) {
-    value.emplace(std::move(v));
+    returned_value.emplace(std::move(v));
 }
 
 inline nonrec<void> detail::promise<void>::get_return_object() {
@@ -169,7 +169,7 @@ inline nonrec<void> detail::promise<void>::get_return_object() {
 template <typename T>
 bool detail::awaitable<T>::await_ready() {
     if constexpr (!std::is_void_v<T>) {
-        return handle.promise().value.has_value();
+        return handle.promise().returned_value.has_value();
     }
     return handle.done();
 }
@@ -184,7 +184,7 @@ void detail::awaitable<T>::await_suspend(coro::coroutine_handle<promise<S>> wait
 template <typename T>
 T detail::awaitable<T>::await_resume() {
     if constexpr (!std::is_void_v<T>) {
-        return *handle.promise().value;
+        return *handle.promise().returned_value;
     }
 }
 
@@ -225,7 +225,7 @@ T nonrec<T>::get() && {
         next_handle.resume();
     }
     if constexpr (!std::is_void_v<T>) {
-        return *this->promise().value;
+        return *this->promise().returned_value;
     }
 }
 
